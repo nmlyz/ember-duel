@@ -1,18 +1,20 @@
-// The opponent. Ash plays by readable heuristics, not by search: play the
-// best affordable card, spend removal on real threats, trade up when it is
-// ahead, go for the hero when the board is winning or the kill is in reach.
-// The same function, with different aggression, steers the autopilot that
-// stages the screenshots, so a staged game is a real game.
+// The opponent. Ash plays by 1-ply search (see simulate.js): every card it
+// could play and every attack it could make is tried on a copy of the duel,
+// and the move that leaves Ash best off is the one played. The greedy
+// heuristics below still steer the autopilot that stages the screenshots,
+// so a staged game is a real game.
 
 import { CARD_BY_ID } from './cards.js';
 import {
   attack, attackTargets, canAttackWith, canPlayCard, endTurn, other, playCard,
   spellTargetKind,
 } from './engine.js';
+import { searchTurn } from './simulate.js';
 
 function creatureValue(card) {
   return card.atk * 2 + card.hp + (card.ability === 'guard' ? 2 : 0)
-    + (card.ability === 'swift' ? 1 : 0) + (card.ability === 'siphon' ? 1 : 0);
+    + (card.ability === 'swift' ? 1 : 0) + (card.ability === 'siphon' ? 1 : 0)
+    + (card.ability === 'rally' ? 2 : 0) + (card.ability === 'kindle' ? 2 : 0);
 }
 
 function spellValue(state, side, card) {
@@ -20,12 +22,18 @@ function spellValue(state, side, card) {
   switch (card.spell) {
     case 'damage3': return 6;
     case 'damage4': return state.players[foe].board.length ? 7 : -99;
+    case 'damage5': return state.players[foe].board.length ? 8 : -99;
+    case 'damageAll1': return state.players[foe].board.length >= 2 ? 6 : -99;
     case 'damageAll2': return state.players[foe].board.length >= 2 ? 8 : -99;
     case 'damageHero3Draw': return 7;
+    case 'damageHero2Draw': return 6;
+    case 'damageHero1Ember2': return 5;
     case 'damageHero6': return 9;
     case 'heal5': return state.players[side].life <= 12 ? 8 : 2;
+    case 'heal3Draw': return state.players[side].life <= 14 ? 6 : 2;
     case 'draw2': return state.players[side].hand.length <= 3 ? 6 : 2;
     case 'buff3': return state.players[side].board.length ? 5 : -99;
+    case 'buffAtk2': return state.players[side].board.length ? 5 : -99;
     case 'summonSprouts': return state.players[side].board.length <= 3 ? 8 : 3;
     default: return 3;
   }
@@ -48,19 +56,30 @@ function chooseSpellTarget(state, side, card) {
     return { kind: 'hero' };
   }
   if (kind === 'enemyCreature') {
+    // Removal: kill the biggest threat this spell can finish.
+    const lethalHp = card.spell === 'damage5' ? 5 : 4;
     let best = -1; let bestScore = 0;
     state.players[foe].board.forEach((c, i) => {
       const def = CARD_BY_ID[c.defId];
       const score = def.atk * 2 + def.hp;
-      if (c.hp <= 4 && score > bestScore) { best = i; bestScore = score; }
+      if (c.hp <= lethalHp && score > bestScore) { best = i; bestScore = score; }
     });
     return best >= 0 ? { kind: 'creature', index: best } : null;
   }
   if (kind === 'friendlyCreature') {
-    let best = -1; let bestHp = 99;
-    state.players[side].board.forEach((c, i) => {
-      if (c.hp < bestHp) { best = i; bestHp = c.hp; }
-    });
+    // Ember Edge wants the hardest hitter; Stone Skin the frailest body.
+    let best = -1;
+    if (card.spell === 'buffAtk2') {
+      let bestAtk = -1;
+      state.players[side].board.forEach((c, i) => {
+        if (c.atk > bestAtk) { best = i; bestAtk = c.atk; }
+      });
+    } else {
+      let bestHp = 99;
+      state.players[side].board.forEach((c, i) => {
+        if (c.hp < bestHp) { best = i; bestHp = c.hp; }
+      });
+    }
     return best >= 0 ? { kind: 'friendly', index: best } : null;
   }
   return null;
@@ -148,9 +167,14 @@ export function takeTurn(state, side, aggression) {
   return events;
 }
 
-/** The opponent's turn, as the live game calls it. */
+/** The opponent's turn: 1-ply search, as the live game calls it. */
 export function opponentTurn(state) {
-  return takeTurn(state, 1, 0.65);
+  return searchTurn(state, 1, 0.65);
+}
+
+/** The same search at a chosen aggression, for the self-play harness. */
+export function searchOpponentTurn(state, aggression) {
+  return searchTurn(state, 1, aggression);
 }
 
 /** Autopilot for the human side in staged games: 0 passive, 1 aggressive. */

@@ -586,7 +586,7 @@ function renderFx(ctx, fx, now) {
 
 function renderTitle(ctx, game, now) {
   // Decorative fan of cards behind the title.
-  const fan = ['emberlord', 'flame-drake', 'wildfire-phoenix', 'deep-kraken', 'worldroot'];
+  const fan = ['emberlord', 'magma-behemoth', 'storm-herald', 'tidal-leviathan', 'worldroot'];
   fan.forEach((id, i) => {
     const cx = 640 + (i - 2) * 150;
     const angle = (i - 2) * 0.10;
@@ -619,7 +619,7 @@ function renderTitle(ctx, game, now) {
   ctx.fillText('A duel of ember, element and nerve', 640, 248);
   ctx.font = '17px sans-serif';
   ctx.fillStyle = 'rgba(253,246,227,0.92)';
-  ctx.fillText('Outwit Ash, the Ember Warden · 20 life each · first to zero loses', 640, 292);
+  ctx.fillText('Outwit Ash, the Ember Warden · 25 life each · first to zero loses', 640, 292);
   ctx.fillText('Flame beats Leaf · Leaf beats Stone · Stone beats Tide · Tide beats Flame', 640, 320);
   // Begin button.
   const pulse = 0.6 + 0.4 * Math.sin(now / 350);
@@ -690,8 +690,8 @@ function renderHelp(ctx) {
   ctx.textAlign = 'left';
   ctx.textBaseline = 'top';
   ctx.font = 'bold 28px sans-serif';
-  ctx.fillText('How to duel', 372, 116);
-  ctx.font = '17px sans-serif';
+  ctx.fillText('How to duel', 372, 112);
+  ctx.font = '16px sans-serif';
   const lines = [
     'Each turn you gain ember (1 more than last turn, up to 10)',
     'and draw a card. Spend ember to play cards from your hand.',
@@ -701,6 +701,8 @@ function renderHelp(ctx) {
     '',
     'Guard creatures must be attacked before anything else',
     'on their side. Siphon heals your hero when it attacks.',
+    'Rally gives your other creatures +1 attack when it',
+    'is summoned. Kindle gains 1 ember when it is played.',
     '',
     'Element advantage deals +2 damage:',
     'Flame beats Leaf · Leaf beats Stone',
@@ -711,11 +713,10 @@ function renderHelp(ctx) {
     '',
     'Reduce Ash to 0 life to win. Run out of cards and',
     'your hero takes 2 fatigue damage each turn.',
-    '',
     'Keys: 1-7 play a card · Space end turn · M mute · R restart',
   ];
-  lines.forEach((line, i) => ctx.fillText(line, 372, 168 + i * 26));
-  ctx.font = 'bold 17px sans-serif';
+  lines.forEach((line, i) => ctx.fillText(line, 372, 154 + i * 20));
+  ctx.font = 'bold 16px sans-serif';
   ctx.fillText('Press H or click anywhere to close', 372, 600);
   ctx.restore();
 }

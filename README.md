@@ -5,7 +5,7 @@
 # Ember Duel
 
 A duel of ember, element and nerve. You face Ash, the Ember Warden, across
-a table with 20 life each: spend ember to play creatures and spells from
+a table with 25 life each: spend ember to play creatures and spells from
 your hand, attack with the creatures on your board, and reduce Ash to zero
 before Ash does the same to you.
 
@@ -27,27 +27,34 @@ game is static files that play offline.
   card. Spend ember to play cards.
 - Creatures cannot attack the turn they are played, unless they have
   **Swift**. **Guard** creatures must be attacked before anything else on
-  their side. **Siphon** heals your hero when it attacks.
+  their side. **Siphon** heals your hero when it attacks. **Rally** gives
+  your other creatures +1 attack when it is summoned. **Kindle** gains
+  1 ember when the creature is played.
 - Element advantage deals +2 damage: **Flame beats Leaf · Leaf beats
   Stone · Stone beats Tide · Tide beats Flame**.
 - Run out of cards and your hero takes 2 fatigue damage each turn.
+- Going second is compensated: Ash starts with one extra card and a spare
+  ember for its first turn, and you skip your opening draw.
 - Reduce Ash to 0 life to win. Your score is damage dealt plus cards
   played, with a bonus for the win.
 
 ## The cards
 
-27 original cards across four elements: 18 creatures and 9 spells, from
-the 1-ember Cinder Pup to the 7-ember Emberlord. The deck is 45 cards;
+45 original cards across four elements: 30 creatures and 15 spells, from
+the 1-ember Cinder Pup to the 7-ember Emberlord. The deck is 75 cards;
 both duelists draw from the same list, shuffled with a seed, so every
-duel plays differently.
+duel plays differently. Ash, the Ember Warden, plays by 1-ply search:
+every card it could play and every attack it could make is tried on a
+copy of the duel, and the move that leaves it best off is the one played.
 
 ## Layout
 
 - `game/index.html` — the page; a 1280×720 canvas, mouse and keyboard
 - `game/src/main.js` — boot, game loop, screenshot mode (`?shot=`)
 - `game/src/engine.js` — the pure rules: turns, ember, combat, spells
-- `game/src/cards.js` — the 27-card catalogue and the element cycle
+- `game/src/cards.js` — the 45-card catalogue and the element cycle
 - `game/src/ai.js` — Ash's heuristics and the autopilot that stages shots
+- `game/src/simulate.js` — duel cloning, position scoring and Ash's 1-ply search
 - `game/src/render.js` — the table, hands, boards, cards and end screens
 - `game/src/input.js` — mouse and keyboard input, targeting
 - `game/src/sound.js` — synthesised WebAudio sounds, no audio files

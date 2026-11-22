@@ -2,7 +2,7 @@
 // here, so the same code drives the live game, the AI and the screenshot
 // staging: a seeded game replays exactly the same way every time.
 //
-// A duel: two heroes at 20 life. Each turn the active duelist gains ember
+// A duel: two heroes at 25 life. Each turn the active duelist gains ember
 // (1 more than last turn, up to 10), refills to that much, draws a card, then
 // plays creatures and spells from hand and attacks with creatures on the
 // board. Creatures cannot attack the turn they are played unless Swift.
@@ -13,7 +13,7 @@
 import { CARD_BY_ID, buildDeck, elementAdvantage } from './cards.js';
 import { makeRng, shuffle } from './random.js';
 
-export const MAX_LIFE = 20;
+export const MAX_LIFE = 25;
 export const MAX_EMBER = 10;
 export const MAX_BOARD = 5;
 export const MAX_HAND = 10;
@@ -27,6 +27,7 @@ export function createGame(seed) {
     life: MAX_LIFE,
     ember: 0,
     maxEmber: 0,
+    bonusEmber: 0,
     hand: [],
     board: [],
     deck: shuffle(buildDeck(), rng),
@@ -40,6 +41,8 @@ export function createGame(seed) {
     phase: 'title', // title | play | over
     players,
     winner: null, // 0 = you, 1 = Ash, null = ongoing
+    // The first duelist skips the opening draw: going first is worth a card.
+    drawSkip: [true, false],
     log: [],
     stats: {
       turns: 0,
@@ -85,21 +88,32 @@ export function startDuel(state) {
   state.turn = 1;
   state.active = 0;
   for (const side of [0, 1]) {
-    for (let i = 0; i < START_HAND; i += 1) drawFromDeck(state, side);
+    // The second duelist starts with one extra card: going first is worth
+    // about a card, and the extra draw keeps the seats near even.
+    const handSize = side === 1 ? START_HAND + 1 : START_HAND;
+    for (let i = 0; i < handSize; i += 1) drawFromDeck(state, side);
   }
   beginTurn(state, 0);
+  // Ash opens with one spare ember for its first turn only: a single
+  // tempo play for going second, not a ramp that lasts the whole duel.
+  state.players[1].bonusEmber = 1;
   log(state, 'The duel begins. Your move.');
 }
 
 function beginTurn(state, side) {
   const player = state.players[side];
   player.maxEmber = Math.min(MAX_EMBER, player.maxEmber + 1);
-  player.ember = player.maxEmber;
+  player.ember = player.maxEmber + (player.bonusEmber || 0);
+  player.bonusEmber = 0;
   for (const creature of player.board) {
     creature.canAttack = true;
     creature.justSummoned = false;
   }
-  drawFromDeck(state, side);
+  if (state.drawSkip[side]) {
+    state.drawSkip[side] = false;
+  } else {
+    drawFromDeck(state, side);
+  }
   if (state.players[0].life <= 0 || state.players[1].life <= 0) checkWin(state);
 }
 
@@ -175,11 +189,19 @@ function summonCreature(state, side, defId) {
   };
   nextUid += 1;
   state.players[side].board.push(creature);
+  if (def.ability === 'rally') {
+    // Rally: every other friendly creature gains +1 attack.
+    for (const otherCreature of state.players[side].board) {
+      if (otherCreature !== creature) otherCreature.atk += 1;
+    }
+    log(state, `${def.name} rallies the board: friendly creatures gain +1 attack.`);
+  }
   return creature;
 }
 
 function applySpell(state, side, card, target) {
   const foe = other(side);
+  const player = state.players[side];
   switch (card.spell) {
     case 'damage3': {
       if (target.kind === 'hero') damageHero(state, foe, 3, card.name);
@@ -196,6 +218,41 @@ function applySpell(state, side, card, target) {
       }
       break;
     }
+    case 'damageAll1': {
+      for (let i = state.players[foe].board.length - 1; i >= 0; i -= 1) {
+        damageCreature(state, foe, i, 1, card.name);
+      }
+      break;
+    }
+    case 'damage5': {
+      damageCreature(state, foe, target.index, 5, card.name);
+      break;
+    }
+    case 'damageHero2Draw': {
+      damageHero(state, foe, 2, card.name);
+      drawFromDeck(state, side);
+      break;
+    }
+    case 'damageHero1Ember2': {
+      damageHero(state, foe, 1, card.name);
+      player.ember = Math.min(MAX_EMBER, player.ember + 2);
+      log(state, `${heroName(side)} steals 2 ember.`);
+      break;
+    }
+    case 'heal3Draw': {
+      player.life = Math.min(MAX_LIFE, player.life + 3);
+      log(state, `${heroName(side)} heals 3 life.`);
+      drawFromDeck(state, side);
+      break;
+    }
+    case 'buffAtk2': {
+      const creature = state.players[side].board[target.index];
+      if (creature) {
+        creature.atk += 2;
+        log(state, `${CARD_BY_ID[creature.defId].name} gains +2 attack.`);
+      }
+      break;
+    }
     case 'damageHero3Draw': {
       damageHero(state, foe, 3, card.name);
       drawFromDeck(state, side);
@@ -206,7 +263,6 @@ function applySpell(state, side, card, target) {
       break;
     }
     case 'heal5': {
-      const player = state.players[side];
       player.life = Math.min(MAX_LIFE, player.life + 5);
       log(state, `${heroName(side)} heals 5 life.`);
       break;
@@ -258,7 +314,9 @@ export function canPlayCard(state, side, handIndex) {
   if (card.kind === 'creature' && player.board.length >= MAX_BOARD) return false;
   if (card.kind === 'spell' && card.spell === 'summonSprouts' && player.board.length >= MAX_BOARD) return false;
   if (card.kind === 'spell' && card.spell === 'buff3' && player.board.length === 0) return false;
+  if (card.kind === 'spell' && card.spell === 'buffAtk2' && player.board.length === 0) return false;
   if (card.kind === 'spell' && card.spell === 'damage4' && state.players[other(side)].board.length === 0) return false;
+  if (card.kind === 'spell' && card.spell === 'damage5' && state.players[other(side)].board.length === 0) return false;
   return true;
 }
 
@@ -284,6 +342,11 @@ export function playCard(state, side, handIndex, target) {
   if (card.kind === 'creature') {
     summonCreature(state, side, card.id);
     state.stats.creaturesSummoned[side] += 1;
+    if (card.ability === 'kindle') {
+      // Kindle: playing the creature refunds 1 ember, up to this turn's max.
+      player.ember = Math.min(MAX_EMBER, player.ember + 1);
+      log(state, `${card.name} kindles 1 ember.`);
+    }
     log(state, `${heroName(side)} ${side === 0 ? 'play' : 'plays'} ${card.name} (${card.cost} ember).`);
   } else {
     player.discard.push(card.id);
@@ -344,10 +407,15 @@ export function attack(state, side, boardIndex, target) {
       log(state, `Element advantage! ${def.name} strikes ${foeDef.name} for ${damage}.`);
     }
     damageCreature(state, foe, target.index, damage, def.name);
-    // The defender strikes back for its own attack.
+    // The defender strikes back for its own attack, with element
+    // advantage when its element beats the attacker's.
     if (foeCreature.hp > 0 || state.players[foe].board.includes(foeCreature)) {
       const back = state.players[foe].board.indexOf(foeCreature);
-      if (back >= 0) damageCreature(state, side, boardIndex, foeCreature.atk, foeDef.name);
+      if (back >= 0) {
+        let backDamage = foeCreature.atk;
+        if (elementAdvantage(foeDef.element, def.element)) backDamage += 2;
+        damageCreature(state, side, boardIndex, backDamage, foeDef.name);
+      }
     }
   }
   if (def.ability === 'siphon' && state.phase === 'play') {

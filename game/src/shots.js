@@ -6,19 +6,20 @@
 
 import { autopilotTurn, opponentTurn } from './ai.js';
 import { createGame, endTurn, runOpponentTurn, startDuel } from './engine.js';
+import { searchTurn } from './simulate.js';
 import { SCREEN_LOSE, SCREEN_PLAY, SCREEN_TITLE, SCREEN_WIN } from './render.js';
 
 /**
- * Play `turns` full rounds (player autopilot + opponent) from a fresh game.
- * Returns the state mid-duel. The player autopilot's aggression and the
- * opponent's are separate, so a scene can favour either side.
+ * Play `turns` full rounds (player + opponent) from a fresh game.
+ * Returns the state mid-duel. `playSide0` plays the human side's turn;
+ * Ash always answers with its 1-ply search.
  */
-function playRounds(seed, rounds, playerAggression) {
+function playRounds(seed, rounds, playSide0) {
   const state = createGame(seed);
   startDuel(state);
   for (let round = 0; round < rounds; round += 1) {
     if (state.phase !== 'play') break;
-    autopilotTurn(state, playerAggression);
+    playSide0(state);
     if (state.phase !== 'play') break;
     const result = endTurn(state);
     if (!result.ok) break;
@@ -35,25 +36,25 @@ function playRounds(seed, rounds, playerAggression) {
  */
 export function stageShot(name, seed) {
   if (name === 'table') {
-    const state = playRounds(seed, 4, 0.6);
+    const state = playRounds(seed, 4, (s) => autopilotTurn(s, 0.6));
     return { state, screen: SCREEN_PLAY };
   }
   if (name === 'win') {
-    // An aggressive player against a cautious Ash: the duel ends in our favour.
-    const state = playRounds(seed, 30, 0.95);
-    if (state.phase !== 'over') {
-      // Fall back to a longer, harder push.
-      const retry = playRounds(seed + 1000, 40, 1);
-      if (retry.phase === 'over' && retry.winner === 0) return { state: retry, screen: SCREEN_WIN };
+    // A searching player at full aggression against Ash: the duel ends in
+    // our favour. Fall back to a longer push on another seed.
+    let state = playRounds(seed, 30, (s) => searchTurn(s, 0, 1));
+    if (state.winner !== 0) {
+      const retry = playRounds(seed + 1000, 40, (s) => searchTurn(s, 0, 1));
+      if (retry.winner === 0) state = retry;
     }
     return { state, screen: state.winner === 0 ? SCREEN_WIN : SCREEN_PLAY };
   }
   if (name === 'lose') {
     // A passive player that never attacks the hero: Ash closes the duel.
-    const state = playRounds(seed, 30, 0);
-    if (state.phase !== 'over') {
-      const retry = playRounds(seed + 2000, 40, 0);
-      if (retry.phase === 'over' && retry.winner === 1) return { state: retry, screen: SCREEN_LOSE };
+    let state = playRounds(seed, 30, (s) => autopilotTurn(s, 0));
+    if (state.winner !== 1) {
+      const retry = playRounds(seed + 2000, 40, (s) => autopilotTurn(s, 0));
+      if (retry.winner === 1) state = retry;
     }
     return { state, screen: state.winner === 1 ? SCREEN_LOSE : SCREEN_PLAY };
   }

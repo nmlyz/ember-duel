@@ -41,6 +41,18 @@ export const CARDS = [
   { id: 'storm-roc', name: 'Storm Roc', kind: 'creature', element: 'tide', cost: 6, atk: 8, hp: 5, ability: 'swift', text: 'Swift: can attack the turn it is played.' },
   { id: 'emberlord', name: 'Emberlord', kind: 'creature', element: 'flame', cost: 7, atk: 8, hp: 8, ability: null, text: 'The duel ends where he stands.' },
   { id: 'worldroot', name: 'Worldroot', kind: 'creature', element: 'leaf', cost: 7, atk: 5, hp: 9, ability: 'guard', text: 'Guard: enemies must attack it first.' },
+  { id: 'ember-moth', name: 'Ember Moth', kind: 'creature', element: 'flame', cost: 1, atk: 1, hp: 1, ability: 'kindle', text: 'Kindle: gain 1 ember when played.' },
+  { id: 'pebble-crab', name: 'Pebble Crab', kind: 'creature', element: 'stone', cost: 2, atk: 2, hp: 3, ability: 'guard', text: 'Guard: enemies must attack it first.' },
+  { id: 'bramble-wolf', name: 'Bramble Wolf', kind: 'creature', element: 'leaf', cost: 2, atk: 2, hp: 2, ability: 'rally', text: 'Rally: friendly creatures gain +1 attack.' },
+  { id: 'cinder-hound', name: 'Cinder Hound', kind: 'creature', element: 'flame', cost: 3, atk: 4, hp: 2, ability: 'swift', text: 'Swift: can attack the turn it is played.' },
+  { id: 'tidecaller', name: 'Tidecaller', kind: 'creature', element: 'tide', cost: 3, atk: 2, hp: 4, ability: 'rally', text: 'Rally: friendly creatures gain +1 attack.' },
+  { id: 'granite-warden', name: 'Granite Warden', kind: 'creature', element: 'stone', cost: 4, atk: 2, hp: 7, ability: 'guard', text: 'Guard: enemies must attack it first.' },
+  { id: 'thorn-assassin', name: 'Thorn Assassin', kind: 'creature', element: 'leaf', cost: 4, atk: 6, hp: 3, ability: 'swift', text: 'Swift: can attack the turn it is played.' },
+  { id: 'boulder-elemental', name: 'Boulder Elemental', kind: 'creature', element: 'stone', cost: 5, atk: 5, hp: 6, ability: 'guard', text: 'Guard: enemies must attack it first.' },
+  { id: 'storm-herald', name: 'Storm Herald', kind: 'creature', element: 'tide', cost: 5, atk: 5, hp: 6, ability: 'rally', text: 'Rally: friendly creatures gain +1 attack.' },
+  { id: 'magma-behemoth', name: 'Magma Behemoth', kind: 'creature', element: 'flame', cost: 6, atk: 7, hp: 6, ability: 'siphon', text: 'Siphon: heals its hero 2 when it attacks.' },
+  { id: 'ironbark-ancient', name: 'Ironbark Ancient', kind: 'creature', element: 'leaf', cost: 6, atk: 6, hp: 8, ability: 'guard', text: 'Guard: enemies must attack it first.' },
+  { id: 'tidal-leviathan', name: 'Tidal Leviathan', kind: 'creature', element: 'tide', cost: 7, atk: 7, hp: 9, ability: 'siphon', text: 'Siphon: heals its hero 2 when it attacks.' },
   { id: 'ember-burst', name: 'Ember Burst', kind: 'spell', element: 'flame', cost: 2, target: 'any', spell: 'damage3', text: 'Deal 3 damage to any target.' },
   { id: 'healing-rain', name: 'Healing Rain', kind: 'spell', element: 'tide', cost: 2, target: 'none', spell: 'heal5', text: 'Restore 5 life to your hero.' },
   { id: 'surge', name: 'Surge', kind: 'spell', element: 'tide', cost: 1, target: 'none', spell: 'draw2', text: 'Draw 2 cards.' },
@@ -50,18 +62,24 @@ export const CARDS = [
   { id: 'tidal-surge', name: 'Tidal Surge', kind: 'spell', element: 'tide', cost: 3, target: 'none', spell: 'damageHero3Draw', text: 'Deal 3 to the enemy hero. Draw a card.' },
   { id: 'rebirth', name: 'Rebirth', kind: 'spell', element: 'leaf', cost: 4, target: 'none', spell: 'summonSprouts', text: 'Summon two 2/2 Thorn Sprouts.' },
   { id: 'meteor', name: 'Meteor', kind: 'spell', element: 'flame', cost: 5, target: 'none', spell: 'damageHero6', text: 'Deal 6 damage to the enemy hero.' },
+  { id: 'cinder-rain', name: 'Cinder Rain', kind: 'spell', element: 'flame', cost: 1, target: 'none', spell: 'damageAll1', text: 'Deal 1 damage to all enemy creatures.' },
+  { id: 'ember-edge', name: 'Ember Edge', kind: 'spell', element: 'stone', cost: 1, target: 'friendlyCreature', spell: 'buffAtk2', text: 'Give a friendly creature +2 attack.' },
+  { id: 'second-wind', name: 'Second Wind', kind: 'spell', element: 'tide', cost: 2, target: 'none', spell: 'heal3Draw', text: 'Restore 3 life to your hero. Draw a card.' },
+  { id: 'spark-lance', name: 'Spark Lance', kind: 'spell', element: 'flame', cost: 2, target: 'none', spell: 'damageHero2Draw', text: 'Deal 2 damage to the enemy hero. Draw a card.' },
+  { id: 'ember-theft', name: 'Ember Theft', kind: 'spell', element: 'flame', cost: 2, target: 'none', spell: 'damageHero1Ember2', text: 'Deal 1 damage to the enemy hero. Gain 2 ember.' },
+  { id: 'boulderfall', name: 'Boulderfall', kind: 'spell', element: 'stone', cost: 3, target: 'enemyCreature', spell: 'damage5', text: 'Deal 5 damage to a creature.' },
 ];
 
 export const CARD_BY_ID = Object.fromEntries(CARDS.map((c) => [c.id, c]));
 
-/** The 45-card deck both duelists draw from: two of each creature, one of each spell. */
+/** The 75-card deck both duelists draw from: two of each creature, one of each spell. */
 export function buildDeck() {
   const deck = [];
   for (const card of CARDS) {
     deck.push(card.id);
     if (card.kind === 'creature') deck.push(card.id);
   }
-  return deck; // 18 creatures x2 = 36, + 9 spells = 45
+  return deck; // 30 creatures x2 = 60, + 15 spells = 75
 }
 
 export const DECK_SIZE = buildDeck().length;
@@ -70,4 +88,6 @@ export const ABILITY_TEXT = {
   guard: 'Guard',
   swift: 'Swift',
   siphon: 'Siphon',
+  rally: 'Rally',
+  kindle: 'Kindle',
 };
